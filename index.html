@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IP Address Information Finder</title>
+    
+    <!-- Leaflet Map CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #eef2f3;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1a2a3a;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            outline: none;
+            font-size: 16px;
+        }
+
+        .search-box button {
+            padding: 12px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .search-box button:hover {
+            background-color: #0056b3;
+        }
+
+        .ip-header {
+            background: #1a2a3a;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .ip-header p {
+            font-size: 14px;
+            color: #bdc3c7;
+        }
+
+        .ip-header h2 {
+            font-size: 22px;
+            color: #f1c40f;
+            margin-top: 5px;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border: 1px solid #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+        }
+
+        .card h4 {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .card p {
+            font-size: 15px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        #map {
+            height: 250px;
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🌐 IP Address Information Finder</h1>
+
+        <!-- Search Bar -->
+        <div class="search-box">
+            <input type="text" id="ipInput" placeholder="Enter IP Address ">
+            <button onclick="fetchIPDetails()">Search IP</button>
+        </div>
+
+        <!-- Main IP Header -->
+        <div class="ip-header">
+            <p>Your Public IP Address</p>
+            <h2 id="ipDisplay">Loading...</h2>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="details-grid">
+            <div class="card">
+                <h4>📍 Location</h4>
+                <p id="location">-</p>
+            </div>
+            <div class="card">
+                <h4>📶 ISP / Operator</h4>
+                <p id="isp">-</p>
+            </div>
+            <div class="card">
+                <h4>🌐 Coordinates</h4>
+                <p id="coords">-</p>
+            </div>
+            <div class="card">
+                <h4>⏰ Timezone</h4>
+                <p id="timezone">-</p>
+            </div>
+        </div>
+
+        <!-- Map Container -->
+        <div id="map"></div>
+    </div>
+
+    <!-- Leaflet Map JS Library -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Project Logic Code -->
+    <script>
+        // Map सुरु करणे
+        let map = L.map('map').setView([0, 0], 2);
+        let marker;
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // IP Data Fetch करण्यासाठी CORS-Free API (ipwho.is)
+        async function fetchIPDetails() {
+            let customIP = document.getElementById('ipInput').value.trim();
+            
+            // ipwho.is API (यामध्ये CORS चा एरर येत नाही)
+            let url = customIP 
+                ? `https://ipwho.is/${customIP}` 
+                : 'https://ipwho.is/';
+
+            try {
+                let response = await fetch(url);
+                let data = await response.json();
+
+                if (!data.success) {
+                    alert('PLEASE ENTER VALID IP ADRESS !');
+                    return;
+                }
+
+                // HTML Elements अपडेट करणे
+                document.getElementById('ipDisplay').innerText = data.ip;
+                document.getElementById('location').innerText = `${data.city}, ${data.region}, ${data.country}`;
+                document.getElementById('isp').innerText = data.connection ? data.connection.isp : '-';
+                document.getElementById('coords').innerText = `${data.latitude}, ${data.longitude}`;
+                document.getElementById('timezone').innerText = data.timezone ? data.timezone.id : '-';
+
+                // Map अपडेट करणे
+                let lat = data.latitude;
+                let lon = data.longitude;
+
+                map.setView([lat, lon], 12);
+
+                if (marker) map.removeLayer(marker);
+                marker = L.marker([lat, lon]).addTo(map)
+                    .bindPopup(`<b>IP:</b> ${data.ip}<br><b>City:</b> ${data.city}`)
+                    .openPopup();
+
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                alert("please check your internet conection.");
+            }
+        }
+
+        // पेज लोड झाल्यावर लगेच रन होणार
+        fetchIPDetails();
+    </script>
+</body>
+</html>
